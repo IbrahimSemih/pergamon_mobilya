@@ -1,7 +1,6 @@
 "use client";
 
 import { AuthProvider } from "@/lib/auth-context";
-import "../globals.css";
 
 export default function AdminLayout({
   children,
@@ -11,7 +10,7 @@ export default function AdminLayout({
   // Admin paneli için header ve footer olmadan render et
   return (
     <AuthProvider>
-      <div className="min-h-screen">{children}</div>
+      <div className="min-h-screen bg-gray-50">{children}</div>
     </AuthProvider>
   );
 }

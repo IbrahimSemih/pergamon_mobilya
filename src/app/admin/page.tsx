@@ -151,7 +151,7 @@ export default function AdminLoginPage() {
         </div>
 
         <p className="text-center text-gray-500 text-sm mt-6">
-          © {new Date().getFullYear()} Pergamon Mobilya
+          © 2026 Pergamon Mobilya
         </p>
       </div>
     </div>
