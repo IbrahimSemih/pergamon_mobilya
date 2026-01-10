@@ -13,10 +13,17 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { db, storage } from "./firebase";
+import { db, storage, isFirebaseConfigured } from "./firebase";
 import type { Product, CreateProductInput, UpdateProductInput, ProductCategory } from "@/types";
 
 const PRODUCTS_COLLECTION = "products";
+
+// Firebase yapılandırması kontrolü
+function checkFirebaseConfig() {
+  if (!isFirebaseConfigured || !db) {
+    throw new Error("Firebase yapılandırması bulunamadı. Lütfen .env.local dosyasını kontrol edin.");
+  }
+}
 
 // Firestore timestamp'ı Date'e çevir
 const convertTimestamp = (timestamp: Timestamp): Date => {
@@ -44,8 +51,9 @@ const convertDocToProduct = (doc: any): Product => {
 
 // Tüm ürünleri getir
 export async function getAllProducts(): Promise<Product[]> {
+  checkFirebaseConfig();
   const q = query(
-    collection(db, PRODUCTS_COLLECTION),
+    collection(db!, PRODUCTS_COLLECTION),
     orderBy("createdAt", "desc")
   );
   const snapshot = await getDocs(q);
@@ -54,30 +62,77 @@ export async function getAllProducts(): Promise<Product[]> {
 
 // Kategoriye göre ürünleri getir
 export async function getProductsByCategory(category: ProductCategory): Promise<Product[]> {
-  const q = query(
-    collection(db, PRODUCTS_COLLECTION),
-    where("category", "==", category),
-    orderBy("createdAt", "desc")
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(convertDocToProduct);
+  checkFirebaseConfig();
+  
+  try {
+    // Önce index ile deneyelim (orderBy ile)
+    const q = query(
+      collection(db!, PRODUCTS_COLLECTION),
+      where("category", "==", category),
+      orderBy("createdAt", "desc")
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(convertDocToProduct);
+  } catch (error: any) {
+    // Index yoksa, orderBy olmadan deneyelim
+    if (error?.code === "failed-precondition" || error?.message?.includes("index")) {
+      console.warn("Firestore index bulunamadı, orderBy olmadan devam ediliyor...");
+      const q = query(
+        collection(db!, PRODUCTS_COLLECTION),
+        where("category", "==", category)
+      );
+      const snapshot = await getDocs(q);
+      const products = snapshot.docs.map(convertDocToProduct);
+      // Client-side'da sırala
+      return products.sort((a, b) => {
+        const dateA = a.createdAt?.getTime() || 0;
+        const dateB = b.createdAt?.getTime() || 0;
+        return dateB - dateA; // Yeni önce
+      });
+    }
+    throw error;
+  }
 }
 
 // Kampanyalı ürünleri getir
 export async function getCampaignProducts(): Promise<Product[]> {
-  const q = query(
-    collection(db, PRODUCTS_COLLECTION),
-    where("isCampaign", "==", true),
-    orderBy("createdAt", "desc")
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(convertDocToProduct);
+  checkFirebaseConfig();
+  
+  try {
+    // Önce index ile deneyelim (orderBy ile)
+    const q = query(
+      collection(db!, PRODUCTS_COLLECTION),
+      where("isCampaign", "==", true),
+      orderBy("createdAt", "desc")
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(convertDocToProduct);
+  } catch (error: any) {
+    // Index yoksa, orderBy olmadan deneyelim
+    if (error?.code === "failed-precondition" || error?.message?.includes("index")) {
+      console.warn("Firestore index bulunamadı, orderBy olmadan devam ediliyor...");
+      const q = query(
+        collection(db!, PRODUCTS_COLLECTION),
+        where("isCampaign", "==", true)
+      );
+      const snapshot = await getDocs(q);
+      const products = snapshot.docs.map(convertDocToProduct);
+      // Client-side'da sırala
+      return products.sort((a, b) => {
+        const dateA = a.createdAt?.getTime() || 0;
+        const dateB = b.createdAt?.getTime() || 0;
+        return dateB - dateA; // Yeni önce
+      });
+    }
+    throw error;
+  }
 }
 
 // Slug'a göre ürün getir
 export async function getProductBySlug(slug: string): Promise<Product | null> {
+  checkFirebaseConfig();
   const q = query(
-    collection(db, PRODUCTS_COLLECTION),
+    collection(db!, PRODUCTS_COLLECTION),
     where("slug", "==", slug),
     limit(1)
   );
@@ -88,7 +143,8 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 
 // ID'ye göre ürün getir
 export async function getProductById(id: string): Promise<Product | null> {
-  const docRef = doc(db, PRODUCTS_COLLECTION, id);
+  checkFirebaseConfig();
+  const docRef = doc(db!, PRODUCTS_COLLECTION, id);
   const docSnap = await getDoc(docRef);
   if (!docSnap.exists()) return null;
   return convertDocToProduct(docSnap);
@@ -96,7 +152,8 @@ export async function getProductById(id: string): Promise<Product | null> {
 
 // Yeni ürün oluştur
 export async function createProduct(input: CreateProductInput): Promise<Product> {
-  const docRef = await addDoc(collection(db, PRODUCTS_COLLECTION), {
+  checkFirebaseConfig();
+  const docRef = await addDoc(collection(db!, PRODUCTS_COLLECTION), {
     ...input,
     createdAt: Timestamp.now(),
   });
@@ -106,8 +163,9 @@ export async function createProduct(input: CreateProductInput): Promise<Product>
 
 // Ürün güncelle
 export async function updateProduct(input: UpdateProductInput): Promise<void> {
+  checkFirebaseConfig();
   const { id, ...data } = input;
-  const docRef = doc(db, PRODUCTS_COLLECTION, id);
+  const docRef = doc(db!, PRODUCTS_COLLECTION, id);
   await updateDoc(docRef, {
     ...data,
     updatedAt: Timestamp.now(),
@@ -116,12 +174,16 @@ export async function updateProduct(input: UpdateProductInput): Promise<void> {
 
 // Ürün sil
 export async function deleteProduct(id: string): Promise<void> {
-  const docRef = doc(db, PRODUCTS_COLLECTION, id);
+  checkFirebaseConfig();
+  const docRef = doc(db!, PRODUCTS_COLLECTION, id);
   await deleteDoc(docRef);
 }
 
 // Görsel yükle
 export async function uploadImage(file: File, path: string): Promise<string> {
+  if (!storage) {
+    throw new Error("Firebase Storage yapılandırması bulunamadı.");
+  }
   const storageRef = ref(storage, path);
   await uploadBytes(storageRef, file);
   return getDownloadURL(storageRef);
@@ -129,14 +191,18 @@ export async function uploadImage(file: File, path: string): Promise<string> {
 
 // Görsel sil
 export async function deleteImage(path: string): Promise<void> {
+  if (!storage) {
+    throw new Error("Firebase Storage yapılandırması bulunamadı.");
+  }
   const storageRef = ref(storage, path);
   await deleteObject(storageRef);
 }
 
 // Son eklenen ürünleri getir (Ana sayfa için)
 export async function getLatestProducts(count: number = 8): Promise<Product[]> {
+  checkFirebaseConfig();
   const q = query(
-    collection(db, PRODUCTS_COLLECTION),
+    collection(db!, PRODUCTS_COLLECTION),
     orderBy("createdAt", "desc"),
     limit(count)
   );
@@ -146,8 +212,9 @@ export async function getLatestProducts(count: number = 8): Promise<Product[]> {
 
 // Stokta olan ürün sayısı
 export async function getInStockCount(): Promise<number> {
+  checkFirebaseConfig();
   const q = query(
-    collection(db, PRODUCTS_COLLECTION),
+    collection(db!, PRODUCTS_COLLECTION),
     where("isInStock", "==", true)
   );
   const snapshot = await getDocs(q);

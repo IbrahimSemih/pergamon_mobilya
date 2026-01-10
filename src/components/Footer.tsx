@@ -40,7 +40,7 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-center gap-3 mb-8 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-amber-800 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-linear-to-br from-amber-600 to-amber-800 rounded-xl flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-xl italic">P</span>
               </div>
               <div className="flex flex-col">
@@ -95,7 +95,7 @@ export function Footer() {
             <h3 className="text-white font-black text-xs tracking-[0.2em] uppercase mb-8">İletişim Bilgileri</h3>
             <ul className="space-y-6">
               <li className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center flex-shrink-0 text-amber-500">
+                <div className="w-10 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center shrink-0 text-amber-500">
                   <Phone size={18} />
                 </div>
                 <div>
@@ -106,7 +106,7 @@ export function Footer() {
                 </div>
               </li>
               <li className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center flex-shrink-0 text-amber-500">
+                <div className="w-10 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center shrink-0 text-amber-500">
                   <MapPin size={18} />
                 </div>
                 <div>

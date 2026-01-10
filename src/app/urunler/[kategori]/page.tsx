@@ -1,114 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components";
+import { getProductsByCategory } from "@/lib/api";
 import { CATEGORIES, type Product, type ProductCategory } from "@/types";
 import { motion } from "framer-motion";
 import { use } from "react";
-
-// Demo ürünler - Firebase bağlantısından sonra silinecek
-const demoProducts: Product[] = [
-  {
-    id: "1",
-    title: "Modern Köşe Koltuk Takımı",
-    slug: "modern-kose-koltuk-takimi",
-    category: "mobilya",
-    description: "Geniş ve konforlu köşe koltuk takımı. L şeklinde tasarım, yumuşak kumaş kaplama.",
-    images: ["/demo/koltuk.jpg"],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 45000,
-    originalPrice: 55000,
-    createdAt: new Date(),
-  },
-  {
-    id: "2",
-    title: "Klasik Koltuk Takımı 3+2+1",
-    slug: "klasik-koltuk-takimi",
-    category: "mobilya",
-    description: "Şık ve zarif klasik koltuk takımı. Dayanıklı kumaş, masif ahşap ayaklar.",
-    images: ["/demo/klasik-koltuk.jpg"],
-    isInStock: true,
-    isCampaign: false,
-    originalPrice: 38000,
-    createdAt: new Date(),
-  },
-  {
-    id: "3",
-    title: "Yemek Odası Takımı",
-    slug: "yemek-odasi-takimi",
-    category: "mobilya",
-    description: "6 kişilik masa ve sandalye seti. Masif ahşap, modern tasarım.",
-    images: ["/demo/yemek-odasi.jpg"],
-    isInStock: true,
-    isCampaign: false,
-    originalPrice: 35000,
-    createdAt: new Date(),
-  },
-  {
-    id: "4",
-    title: "TV Ünitesi Modern",
-    slug: "tv-unitesi-modern",
-    category: "mobilya",
-    description: "240 cm genişlik, kapaklı ve raflı bölümler. LED aydınlatma dahil.",
-    images: ["/demo/tv-unitesi.jpg"],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 8500,
-    originalPrice: 11000,
-    createdAt: new Date(),
-  },
-  {
-    id: "5",
-    title: "Ortopedik Yatak 160x200",
-    slug: "ortopedik-yatak-160x200",
-    category: "yatak-baza",
-    description: "Visco memory foam teknolojisi ile üstün konfor. 10 yıl garanti.",
-    images: ["/demo/yatak.jpg"],
-    isInStock: true,
-    isCampaign: false,
-    originalPrice: 12000,
-    createdAt: new Date(),
-  },
-  {
-    id: "6",
-    title: "Baza Seti 160x200",
-    slug: "baza-seti-160x200",
-    category: "yatak-baza",
-    description: "Sandıklı baza + başlık. Kumaş kaplama, metal ayaklar.",
-    images: ["/demo/baza.jpg"],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 9000,
-    originalPrice: 11500,
-    createdAt: new Date(),
-  },
-  {
-    id: "7",
-    title: "A+ Enerji Buzdolabı",
-    slug: "a-plus-enerji-buzdolabi",
-    category: "beyaz-esya",
-    description: "560 litre kapasite, No-Frost teknolojisi, dijital ekran.",
-    images: ["/demo/buzdolabi.jpg"],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 28000,
-    originalPrice: 32000,
-    createdAt: new Date(),
-  },
-  {
-    id: "8",
-    title: "Çamaşır Makinesi 9kg",
-    slug: "camasir-makinesi-9kg",
-    category: "beyaz-esya",
-    description: "9 kg kapasite, 1400 devir, A+++ enerji sınıfı.",
-    images: ["/demo/camasir.jpg"],
-    isInStock: true,
-    isCampaign: false,
-    originalPrice: 18000,
-    createdAt: new Date(),
-  },
-];
 
 interface PageProps {
   params: Promise<{ kategori: string }>;
@@ -121,6 +19,8 @@ function isValidCategory(slug: string): slug is ProductCategory {
 
 export default function CategoryPage({ params }: PageProps) {
   const { kategori } = use(params);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   
   // Kategori kontrolü
   if (!isValidCategory(kategori)) {
@@ -128,7 +28,28 @@ export default function CategoryPage({ params }: PageProps) {
   }
 
   const category = CATEGORIES.find((c) => c.slug === kategori)!;
-  const products = demoProducts.filter((p) => p.category === kategori);
+
+  useEffect(() => {
+    loadProducts();
+  }, [kategori]);
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const fetchedProducts = await getProductsByCategory(kategori);
+      setProducts(fetchedProducts);
+      console.log(`Kategori "${kategori}" için ${fetchedProducts.length} ürün bulundu:`, fetchedProducts);
+    } catch (error: any) {
+      console.error("Ürünler yüklenemedi:", error);
+      // Index hatası ise kullanıcıya bilgi ver
+      if (error?.code === "failed-precondition" || error?.message?.includes("index")) {
+        console.warn("Firestore index oluşturulması gerekiyor. FIRESTORE_INDEX_SETUP.md dosyasına bakın.");
+      }
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 md:pt-32">
@@ -159,7 +80,13 @@ export default function CategoryPage({ params }: PageProps) {
 
       {/* Ürün Listesi */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {products.length > 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-gray-100 rounded-2xl aspect-[3/4] animate-pulse" />
+            ))}
+          </div>
+        ) : products.length > 0 ? (
           <>
             <motion.div 
               initial={{ opacity: 0 }}

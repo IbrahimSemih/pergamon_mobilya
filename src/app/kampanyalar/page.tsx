@@ -1,68 +1,32 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { ProductCard } from "@/components";
+import { getCampaignProducts } from "@/lib/api";
 import type { Product } from "@/types";
 import { Tag, Clock, Percent, Zap, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
-// Demo kampanyalı ürünler - Firebase bağlantısından sonra silinecek
-const campaignProducts: Product[] = [
-  {
-    id: "1",
-    title: "Modern Köşe Koltuk Takımı",
-    slug: "modern-kose-koltuk-takimi",
-    category: "mobilya",
-    description: "Geniş ve konforlu köşe koltuk takımı. L şeklinde tasarım, yumuşak kumaş kaplama.",
-    images: ["/demo/koltuk.jpg"],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 45000,
-    originalPrice: 55000,
-    createdAt: new Date(),
-  },
-  {
-    id: "4",
-    title: "TV Ünitesi Modern",
-    slug: "tv-unitesi-modern",
-    category: "mobilya",
-    description: "240 cm genişlik, kapaklı ve raflı bölümler. LED aydınlatma dahil.",
-    images: ["/demo/tv-unitesi.jpg"],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 8500,
-    originalPrice: 11000,
-    createdAt: new Date(),
-  },
-  {
-    id: "6",
-    title: "Baza Seti 160x200",
-    slug: "baza-seti-160x200",
-    category: "yatak-baza",
-    description: "Sandıklı baza + başlık. Kumaş kaplama, metal ayaklar.",
-    images: ["/demo/baza.jpg"],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 9000,
-    originalPrice: 11500,
-    createdAt: new Date(),
-  },
-  {
-    id: "7",
-    title: "A+ Enerji Buzdolabı",
-    slug: "a-plus-enerji-buzdolabi",
-    category: "beyaz-esya",
-    description: "560 litre kapasite, No-Frost teknolojisi, dijital ekran.",
-    images: ["/demo/buzdolabi.jpg"],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 28000,
-    originalPrice: 32000,
-    createdAt: new Date(),
-  },
-];
-
 export default function CampaignsPage() {
-  const products = campaignProducts;
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const campaignProducts = await getCampaignProducts();
+      setProducts(campaignProducts);
+    } catch (error) {
+      console.error("Kampanyalı ürünler yüklenemedi:", error);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 md:pt-32">
@@ -110,7 +74,13 @@ export default function CampaignsPage() {
 
       {/* Ürün Listesi */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        {products.length > 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-gray-100 rounded-2xl aspect-[3/4] animate-pulse" />
+            ))}
+          </div>
+        ) : products.length > 0 ? (
           <motion.div 
             initial="hidden"
             animate="visible"

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { getAllProducts, deleteProduct } from "@/lib/api";
 import { 
   ArrowLeft, 
   Plus, 
@@ -17,61 +18,39 @@ import {
 import type { Product, ProductCategory } from "@/types";
 import { CATEGORIES } from "@/types";
 
-// Demo ürünler
-const demoProducts: Product[] = [
-  {
-    id: "1",
-    title: "Modern Köşe Koltuk Takımı",
-    slug: "modern-kose-koltuk-takimi",
-    category: "mobilya",
-    description: "Geniş ve konforlu köşe koltuk takımı.",
-    images: [],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 45000,
-    originalPrice: 55000,
-    createdAt: new Date(),
-  },
-  {
-    id: "2",
-    title: "Ortopedik Yatak 160x200",
-    slug: "ortopedik-yatak-160x200",
-    category: "yatak-baza",
-    description: "Visco memory foam teknolojisi.",
-    images: [],
-    isInStock: true,
-    isCampaign: false,
-    originalPrice: 12000,
-    createdAt: new Date(),
-  },
-  {
-    id: "3",
-    title: "A+ Enerji Buzdolabı",
-    slug: "a-plus-enerji-buzdolabi",
-    category: "beyaz-esya",
-    description: "560 litre kapasite, No-Frost.",
-    images: [],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 28000,
-    originalPrice: 32000,
-    createdAt: new Date(),
-  },
-];
-
 export default function AdminProductsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [products, setProducts] = useState<Product[]>(demoProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<ProductCategory | "all">("all");
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/admin");
     }
   }, [user, authLoading, router]);
+
+  // Firebase'den ürünleri çek
+  useEffect(() => {
+    if (user && !authLoading) {
+      loadProducts();
+    }
+  }, [user, authLoading]);
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const fetchedProducts = await getAllProducts();
+      setProducts(fetchedProducts);
+    } catch (error) {
+      console.error("Ürünler yüklenemedi:", error);
+      alert("Ürünler yüklenirken bir hata oluştu: " + (error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filtreleme
   const filteredProducts = products.filter((product) => {
@@ -83,8 +62,13 @@ export default function AdminProductsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Bu ürünü silmek istediğinizden emin misiniz?")) return;
     
-    // Firebase bağlantısından sonra: await deleteProduct(id);
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await deleteProduct(id);
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    } catch (error) {
+      console.error("Ürün silinemedi:", error);
+      alert("Ürün silinirken bir hata oluştu: " + (error as Error).message);
+    }
   };
 
   if (authLoading || !user) {

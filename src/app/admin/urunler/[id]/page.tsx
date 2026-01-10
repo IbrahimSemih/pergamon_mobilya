@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { createProduct, uploadImage } from "@/lib/api";
+import { getProductById, updateProduct, uploadImage, deleteImage } from "@/lib/api";
 import { CATEGORIES, type ProductCategory } from "@/types";
 import { 
   ArrowLeft, 
@@ -14,6 +14,7 @@ import {
   X,
   Image as ImageIcon 
 } from "lucide-react";
+import { use } from "react";
 
 // Slug oluşturma fonksiyonu
 function generateSlug(title: string): string {
@@ -31,10 +32,16 @@ function generateSlug(title: string): string {
     .trim();
 }
 
-export default function NewProductPage() {
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default function EditProductPage({ params }: PageProps) {
+  const { id } = use(params);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [loadingProduct, setLoadingProduct] = useState(true);
   
   // Form state
   const [title, setTitle] = useState("");
@@ -45,8 +52,9 @@ export default function NewProductPage() {
   const [campaignPrice, setCampaignPrice] = useState("");
   const [isInStock, setIsInStock] = useState(true);
   const [isCampaign, setIsCampaign] = useState(false);
-  const [images, setImages] = useState<string[]>([]); // Önizleme için base64
-  const [imageFiles, setImageFiles] = useState<File[]>([]); // Upload için dosyalar
+  const [existingImages, setExistingImages] = useState<string[]>([]); // Mevcut görseller (URL'ler)
+  const [newImages, setNewImages] = useState<string[]>([]); // Yeni eklenen görseller (base64 önizleme)
+  const [newImageFiles, setNewImageFiles] = useState<File[]>([]); // Yeni yüklenecek dosyalar
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -54,33 +62,75 @@ export default function NewProductPage() {
     }
   }, [user, authLoading, router]);
 
-  // Başlık değiştiğinde slug otomatik oluştur
+  // Ürün bilgilerini yükle
   useEffect(() => {
-    setSlug(generateSlug(title));
-  }, [title]);
+    if (user && !authLoading && id) {
+      loadProduct();
+    }
+  }, [user, authLoading, id]);
+
+  const loadProduct = async () => {
+    try {
+      setLoadingProduct(true);
+      const product = await getProductById(id);
+      
+      if (!product) {
+        alert("Ürün bulunamadı.");
+        router.push("/admin/urunler");
+        return;
+      }
+
+      setTitle(product.title);
+      setSlug(product.slug);
+      setCategory(product.category);
+      setDescription(product.description);
+      setOriginalPrice(product.originalPrice?.toString() || "");
+      setCampaignPrice(product.campaignPrice?.toString() || "");
+      setIsInStock(product.isInStock);
+      setIsCampaign(product.isCampaign);
+      setExistingImages(product.images || []);
+    } catch (error) {
+      console.error("Ürün yüklenemedi:", error);
+      alert("Ürün yüklenirken bir hata oluştu: " + (error as Error).message);
+      router.push("/admin/urunler");
+    } finally {
+      setLoadingProduct(false);
+    }
+  };
+
+  // Başlık değiştiğinde slug otomatik oluştur (sadece slug boşsa)
+  useEffect(() => {
+    if (!slug && title) {
+      setSlug(generateSlug(title));
+    }
+  }, [title, slug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Görselleri Firebase Storage'a yükle
+      // Yeni görselleri Firebase Storage'a yükle
       const uploadedImageUrls: string[] = [];
       
-      for (let i = 0; i < imageFiles.length; i++) {
-        const file = imageFiles[i];
+      for (let i = 0; i < newImageFiles.length; i++) {
+        const file = newImageFiles[i];
         const fileName = `products/${slug}-${Date.now()}-${i}.${file.name.split('.').pop()}`;
         const imageUrl = await uploadImage(file, fileName);
         uploadedImageUrls.push(imageUrl);
       }
 
-      // Ürünü Firestore'a kaydet
-      await createProduct({
+      // Tüm görselleri birleştir (mevcut + yeni)
+      const allImages = [...existingImages, ...uploadedImageUrls];
+
+      // Ürünü güncelle
+      await updateProduct({
+        id,
         title,
         slug,
         category,
         description,
-        images: uploadedImageUrls,
+        images: allImages,
         isInStock,
         isCampaign,
         originalPrice: originalPrice ? Number(originalPrice) : undefined,
@@ -89,8 +139,8 @@ export default function NewProductPage() {
       
       router.push("/admin/urunler");
     } catch (error) {
-      console.error("Ürün kaydedilemedi:", error);
-      alert("Ürün kaydedilirken bir hata oluştu: " + (error as Error).message);
+      console.error("Ürün güncellenemedi:", error);
+      alert("Ürün güncellenirken bir hata oluştu: " + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -102,25 +152,29 @@ export default function NewProductPage() {
 
     Array.from(files).forEach((file) => {
       // Dosyayı upload listesine ekle
-      setImageFiles((prev) => [...prev, file]);
+      setNewImageFiles((prev) => [...prev, file]);
       
       // Önizleme için base64'e çevir
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
-          setImages((prev) => [...prev, e.target!.result as string]);
+          setNewImages((prev) => [...prev, e.target!.result as string]);
         }
       };
       reader.readAsDataURL(file);
     });
   };
 
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  const removeExistingImage = (index: number) => {
+    setExistingImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  if (authLoading || !user) {
+  const removeNewImage = (index: number) => {
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
+    setNewImageFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  if (authLoading || loadingProduct || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
@@ -141,7 +195,7 @@ export default function NewProductPage() {
               >
                 <ArrowLeft size={20} />
               </Link>
-              <span className="font-semibold text-gray-900">Yeni Ürün Ekle</span>
+              <span className="font-semibold text-gray-900">Ürünü Düzenle</span>
             </div>
           </div>
         </div>
@@ -283,56 +337,89 @@ export default function NewProductPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Ürün Görselleri</h2>
             
             <div className="space-y-4">
-              {/* Yükleme alanı */}
-              <label className="block cursor-pointer">
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-amber-500 transition-colors">
-                  <Upload size={32} className="mx-auto text-gray-400 mb-3" />
-                  <p className="text-gray-600 font-medium">
-                    Görselleri sürükleyin veya tıklayın
-                  </p>
-                  <p className="text-gray-400 text-sm mt-1">
-                    PNG, JPG, WEBP (maks. 5MB)
-                  </p>
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
-
-              {/* Yüklenen görseller */}
-              {images.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {images.map((image, index) => (
-                    <div key={index} className="relative group">
-                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                        <img
-                          src={image}
-                          alt={`Görsel ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
+              {/* Mevcut görseller */}
+              {existingImages.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-3">Mevcut Görseller</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {existingImages.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                          <img
+                            src={image}
+                            alt={`Mevcut görsel ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeExistingImage(index)}
+                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={14} />
+                        </button>
+                        {index === 0 && (
+                          <span className="absolute bottom-2 left-2 bg-amber-500 text-white text-xs px-2 py-1 rounded">
+                            Kapak
+                          </span>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X size={14} />
-                      </button>
-                      {index === 0 && (
-                        <span className="absolute bottom-2 left-2 bg-amber-500 text-white text-xs px-2 py-1 rounded">
-                          Kapak
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {images.length === 0 && (
+              {/* Yeni görsel yükleme alanı */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Yeni Görsel Ekle</h3>
+                <label className="block cursor-pointer">
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-amber-500 transition-colors">
+                    <Upload size={32} className="mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-600 font-medium">
+                      Görselleri sürükleyin veya tıklayın
+                    </p>
+                    <p className="text-gray-400 text-sm mt-1">
+                      PNG, JPG, WEBP (maks. 5MB)
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* Yeni eklenen görseller (önizleme) */}
+              {newImages.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-3">Yeni Eklenen Görseller</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {newImages.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                          <img
+                            src={image}
+                            alt={`Yeni görsel ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeNewImage(index)}
+                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {existingImages.length === 0 && newImages.length === 0 && (
                 <div className="flex items-center gap-2 text-gray-400 text-sm">
                   <ImageIcon size={16} />
                   <span>Henüz görsel eklenmedi</span>
@@ -357,12 +444,12 @@ export default function NewProductPage() {
               {loading ? (
                 <>
                   <Loader2 size={20} className="animate-spin" />
-                  <span>Kaydediliyor...</span>
+                  <span>Güncelleniyor...</span>
                 </>
               ) : (
                 <>
                   <Save size={20} />
-                  <span>Ürünü Kaydet</span>
+                  <span>Değişiklikleri Kaydet</span>
                 </>
               )}
             </button>

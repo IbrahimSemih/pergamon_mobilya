@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { LogIn, Loader2, AlertCircle, Info } from "lucide-react";
@@ -14,10 +14,11 @@ export default function AdminLoginPage() {
   const router = useRouter();
 
   // Kullanıcı zaten giriş yapmışsa dashboard'a yönlendir
-  if (!authLoading && user) {
-    router.push("/admin/dashboard");
-    return null;
-  }
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.push("/admin/dashboard");
+    }
+  }, [authLoading, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,12 +56,12 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-gray-900 to-gray-800 px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-2">
-            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-700 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-linear-to-br from-amber-500 to-amber-700 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-2xl">P</span>
             </div>
           </div>

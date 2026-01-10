@@ -1,65 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { HeroSection, CategoryCard, ProductCard } from "@/components";
+import { getLatestProducts } from "@/lib/api";
 import { CATEGORIES } from "@/types";
 import type { Product } from "@/types";
 import Link from "next/link";
 import { ArrowRight, Truck, Shield, CreditCard, Headphones, Sparkles, Star, Zap } from "lucide-react";
 import { motion } from "framer-motion";
-
-// Demo ürünler - Firebase bağlantısından sonra silinecek
-const demoProducts: Product[] = [
-  {
-    id: "1",
-    title: "Modern Köşe Koltuk Takımı",
-    slug: "modern-kose-koltuk-takimi",
-    category: "mobilya",
-    description: "Geniş ve konforlu köşe koltuk takımı. L şeklinde tasarım, yumuşak kumaş kaplama.",
-    images: ["/demo/koltuk.jpg"],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 45000,
-    originalPrice: 55000,
-    createdAt: new Date(),
-  },
-  {
-    id: "2",
-    title: "Ortopedik Yatak 160x200",
-    slug: "ortopedik-yatak-160x200",
-    category: "yatak-baza",
-    description: "Visco memory foam teknolojisi ile üstün konfor. 10 yıl garanti.",
-    images: ["/demo/yatak.jpg"],
-    isInStock: true,
-    isCampaign: false,
-    originalPrice: 12000,
-    createdAt: new Date(),
-  },
-  {
-    id: "3",
-    title: "A+ Enerji Buzdolabı",
-    slug: "a-plus-enerji-buzdolabi",
-    category: "beyaz-esya",
-    description: "560 litre kapasite, No-Frost teknolojisi, dijital ekran.",
-    images: ["/demo/buzdolabi.jpg"],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 28000,
-    originalPrice: 32000,
-    createdAt: new Date(),
-  },
-  {
-    id: "4",
-    title: "Yemek Odası Takımı",
-    slug: "yemek-odasi-takimi",
-    category: "mobilya",
-    description: "6 kişilik masa ve sandalye seti. Masif ahşap, modern tasarım.",
-    images: ["/demo/yemek-odasi.jpg"],
-    isInStock: true,
-    isCampaign: false,
-    originalPrice: 35000,
-    createdAt: new Date(),
-  },
-];
 
 const features = [
   {
@@ -89,6 +37,27 @@ const features = [
 ];
 
 export default function HomePage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const latestProducts = await getLatestProducts(8);
+      setProducts(latestProducts);
+    } catch (error) {
+      console.error("Ürünler yüklenemedi:", error);
+      // Hata durumunda boş array bırak, sayfa çalışmaya devam etsin
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -190,19 +159,31 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
-          >
-            {demoProducts.map((product) => (
-              <motion.div key={product.id} variants={itemVariants}>
-                <ProductCard product={product} />
-              </motion.div>
-            ))}
-          </motion.div>
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-gray-100 rounded-2xl aspect-[3/4] animate-pulse" />
+              ))}
+            </div>
+          ) : products.length > 0 ? (
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
+            >
+              {products.map((product) => (
+                <motion.div key={product.id} variants={itemVariants}>
+                  <ProductCard product={product} />
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Henüz ürün eklenmemiş.</p>
+            </div>
+          )}
         </div>
       </section>
 
