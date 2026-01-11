@@ -4,8 +4,8 @@ import type { SiteConfig } from "@/types";
 export const siteConfig: SiteConfig = {
   name: "Pergamon Mobilya",
   description: "Kaliteli mobilya, beyaz eşya ve yatak-baza ürünlerinde güvenilir adresiniz. Uygun fiyat ve kaliteli hizmet garantisiyle yanınızdayız.",
-  phone: "+90 555 123 4567",
-  whatsapp: "905551234567", // Sadece rakamlar (WhatsApp API için)
+  phone: "+90 551 677 5287",
+  whatsapp: "905516775287", // Sadece rakamlar (WhatsApp API için)
   address: "Atatürk Caddesi No: 123",
   city: "İzmir",
   district: "Bergama",

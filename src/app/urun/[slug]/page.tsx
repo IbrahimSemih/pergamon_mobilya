@@ -1,55 +1,19 @@
 "use client";
 
-import { notFound } from "next/navigation";
+import { useEffect, useState } from "react";
+import { notFound, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { WhatsAppButton } from "@/components";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { ShareButton } from "@/components/ShareButton";
 import { CATEGORIES, type Product } from "@/types";
-import { ChevronLeft, ShieldCheck, Truck, CreditCard, Star } from "lucide-react";
+import { ChevronLeft, ShieldCheck, Truck, CreditCard, Star, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { use } from "react";
-
-// Demo ürünler - Firebase bağlantısından sonra silinecek
-const demoProducts: Product[] = [
-  {
-    id: "1",
-    title: "Modern Köşe Koltuk Takımı",
-    slug: "modern-kose-koltuk-takimi",
-    category: "mobilya",
-    description: "Geniş ve konforlu köşe koltuk takımı. L şeklinde tasarım, yumuşak kumaş kaplama. Oturma grubu evinize modern bir hava katacak. Premium kalite kumaş ve dayanıklı ahşap iskelet ile uzun ömürlü kullanım sağlar.\n\nÖzellikler:\n- L şeklinde tasarım\n- Yumuşak sünger dolgu\n- Leke tutmaz kumaş\n- Dayanıklı ahşap iskelet\n- 3+2+1 kombinasyon",
-    images: ["/demo/koltuk.jpg", "/demo/koltuk-2.jpg", "/demo/koltuk-3.jpg"],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 45000,
-    originalPrice: 55000,
-    createdAt: new Date(),
-  },
-  {
-    id: "5",
-    title: "Ortopedik Yatak 160x200",
-    slug: "ortopedik-yatak-160x200",
-    category: "yatak-baza",
-    description: "Visco memory foam teknolojisi ile üstün konfor. 10 yıl garanti. Omurga sağlığını destekleyen özel tasarım.\n\nÖzellikler:\n- Visco memory foam\n- Hava geçirgen yapı\n- Anti-alerjik kumaş\n- 160x200 cm boyut\n- 10 yıl garanti",
-    images: ["/demo/yatak.jpg"],
-    isInStock: true,
-    isCampaign: false,
-    originalPrice: 12000,
-    createdAt: new Date(),
-  },
-  {
-    id: "7",
-    title: "A+ Enerji Buzdolabı",
-    slug: "a-plus-enerji-buzdolabi",
-    category: "beyaz-esya",
-    description: "560 litre kapasite, No-Frost teknolojisi, dijital ekran. Enerji tasarruflu A+ sınıfı.\n\nÖzellikler:\n- 560 litre toplam kapasite\n- No-Frost teknolojisi\n- Dijital ekran\n- A+ enerji sınıfı\n- Paslanmaz çelik görünüm",
-    images: ["/demo/buzdolabi.jpg"],
-    isInStock: true,
-    isCampaign: true,
-    campaignPrice: 28000,
-    originalPrice: 32000,
-    createdAt: new Date(),
-  },
-];
+import { getProductBySlug } from "@/lib/api";
+import { isFirebaseConfigured } from "@/lib/firebase";
+import { siteUrl } from "@/lib/config";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -57,12 +21,65 @@ interface PageProps {
 
 export default function ProductDetailPage({ params }: PageProps) {
   const { slug } = use(params);
-  
-  // Firebase bağlantısından sonra: const product = await getProductBySlug(slug);
-  const product = demoProducts.find((p) => p.slug === slug);
+  const router = useRouter();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState(0);
 
-  if (!product) {
-    notFound();
+  useEffect(() => {
+    async function fetchProduct() {
+      if (!isFirebaseConfigured) {
+        setError("Firebase yapılandırması bulunamadı.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const data = await getProductBySlug(slug);
+        if (!data) {
+          router.push("/404");
+          return;
+        }
+        setProduct(data);
+      } catch (err) {
+        console.error("Ürün yüklenirken hata:", err);
+        setError("Ürün yüklenirken bir hata oluştu.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProduct();
+  }, [slug, router]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white pt-24 md:pt-32 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-amber-600 mx-auto mb-4" />
+          <p className="text-gray-500 font-medium">Ürün yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !product) {
+    return (
+      <div className="min-h-screen bg-white pt-24 md:pt-32 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 font-medium mb-4">{error || "Ürün bulunamadı."}</p>
+          <Link 
+            href="/"
+            className="text-amber-600 hover:text-amber-700 font-bold underline"
+          >
+            Ana Sayfaya Dön
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   const category = CATEGORIES.find((c) => c.slug === product.category);
@@ -90,12 +107,12 @@ export default function ProductDetailPage({ params }: PageProps) {
             className="space-y-6"
           >
             <div className="relative aspect-square bg-gray-50 rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-2xl">
-              {product.images[0] ? (
+              {product.images[selectedImage] ? (
                 <Image
-                  src={product.images[0]}
+                  src={product.images[selectedImage]}
                   alt={product.title}
                   fill
-                  className="object-cover"
+                  className="object-cover transition-opacity duration-300"
                   priority
                   sizes="(max-width: 1024px) 100vw, 50vw"
                 />
@@ -117,9 +134,14 @@ export default function ProductDetailPage({ params }: PageProps) {
             {product.images.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
                 {product.images.map((image, index) => (
-                  <div
+                  <button
                     key={index}
-                    className="relative aspect-square bg-white rounded-2xl overflow-hidden border border-gray-100 cursor-pointer hover:border-amber-600 transition-all hover:scale-105"
+                    onClick={() => setSelectedImage(index)}
+                    className={`relative aspect-square bg-white rounded-2xl overflow-hidden border-2 cursor-pointer transition-all hover:scale-105 ${
+                      selectedImage === index 
+                        ? "border-amber-600 ring-2 ring-amber-600/20" 
+                        : "border-gray-100 hover:border-amber-400"
+                    }`}
                   >
                     <Image
                       src={image}
@@ -128,7 +150,7 @@ export default function ProductDetailPage({ params }: PageProps) {
                       className="object-cover"
                       sizes="200px"
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -150,9 +172,19 @@ export default function ProductDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter leading-none mb-6">
+            <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter leading-none mb-4">
               {product.title}
             </h1>
+
+            {/* Favori ve Paylaş Butonları */}
+            <div className="flex items-center gap-3 mb-6">
+              <FavoriteButton productId={product.id} variant="full" />
+              <ShareButton 
+                url={`${siteUrl}/urun/${product.slug}`}
+                title={product.title}
+                description={product.description}
+              />
+            </div>
 
             {/* Fiyat */}
             <div className="bg-gray-50 rounded-3xl p-8 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 border border-gray-100">

@@ -118,7 +118,7 @@ export default function RootLayout({
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased min-h-screen flex flex-col`}
       >
         <AdminLayoutWrapper>
-          {children}
+        {children}
         </AdminLayoutWrapper>
       </body>
     </html>

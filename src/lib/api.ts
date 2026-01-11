@@ -150,11 +150,23 @@ export async function getProductById(id: string): Promise<Product | null> {
   return convertDocToProduct(docSnap);
 }
 
+// undefined değerleri temizle (Firestore undefined kabul etmez)
+function removeUndefined<T extends Record<string, any>>(obj: T): Partial<T> {
+  const cleaned: Partial<T> = {};
+  for (const key in obj) {
+    if (obj[key] !== undefined) {
+      cleaned[key] = obj[key];
+    }
+  }
+  return cleaned;
+}
+
 // Yeni ürün oluştur
 export async function createProduct(input: CreateProductInput): Promise<Product> {
   checkFirebaseConfig();
+  const cleanedInput = removeUndefined(input);
   const docRef = await addDoc(collection(db!, PRODUCTS_COLLECTION), {
-    ...input,
+    ...cleanedInput,
     createdAt: Timestamp.now(),
   });
   const newDoc = await getDoc(docRef);
@@ -165,9 +177,10 @@ export async function createProduct(input: CreateProductInput): Promise<Product>
 export async function updateProduct(input: UpdateProductInput): Promise<void> {
   checkFirebaseConfig();
   const { id, ...data } = input;
+  const cleanedData = removeUndefined(data);
   const docRef = doc(db!, PRODUCTS_COLLECTION, id);
   await updateDoc(docRef, {
-    ...data,
+    ...cleanedData,
     updatedAt: Timestamp.now(),
   });
 }

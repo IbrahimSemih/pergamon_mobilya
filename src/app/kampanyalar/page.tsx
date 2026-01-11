@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ProductCard } from "@/components";
 import { getCampaignProducts } from "@/lib/api";
+import { generateGeneralWhatsAppLink } from "@/lib/config";
 import type { Product } from "@/types";
 import { Tag, Clock, Percent, Zap, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
@@ -128,7 +129,7 @@ export default function CampaignsPage() {
             Toplu alışverişlerde veya belirli ürün gruplarında size özel ek indirimler sunuyoruz. WhatsApp üzerinden bize ulaşın.
           </p>
           <a
-            href={`https://wa.me/905551234567?text=${encodeURIComponent("Merhaba, güncel kampanyalar ve indirimler hakkında bilgi almak istiyorum.")}`}
+            href={generateGeneralWhatsAppLink()}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-4 bg-green-600 hover:bg-green-500 text-white px-10 py-5 rounded-2xl font-black text-sm tracking-widest transition-all shadow-xl shadow-green-900/20 active:scale-95"

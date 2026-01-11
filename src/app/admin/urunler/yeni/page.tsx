@@ -75,7 +75,7 @@ export default function NewProductPage() {
       }
 
       // Ürünü Firestore'a kaydet
-      await createProduct({
+      const productData: any = {
         title,
         slug,
         category,
@@ -83,9 +83,17 @@ export default function NewProductPage() {
         images: uploadedImageUrls,
         isInStock,
         isCampaign,
-        originalPrice: originalPrice ? Number(originalPrice) : undefined,
-        campaignPrice: campaignPrice ? Number(campaignPrice) : undefined,
-      });
+      };
+
+      // Sadece tanımlı fiyatları ekle (undefined değerleri Firestore kabul etmez)
+      if (originalPrice) {
+        productData.originalPrice = Number(originalPrice);
+      }
+      if (campaignPrice && isCampaign) {
+        productData.campaignPrice = Number(campaignPrice);
+      }
+
+      await createProduct(productData);
       
       router.push("/admin/urunler");
     } catch (error) {

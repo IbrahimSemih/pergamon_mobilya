@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Phone, MapPin, ChevronDown } from "lucide-react";
+import { Menu, X, Phone, MapPin, ChevronDown, Heart, Search } from "lucide-react";
 import { siteConfig } from "@/lib/config";
+import { useFavorites } from "@/lib/useFavorites";
 import { motion, AnimatePresence } from "framer-motion";
 
 const navigation = [
@@ -21,6 +22,7 @@ export function Header() {
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const isHomePage = pathname === "/";
+  const { favoriteCount } = useFavorites();
 
   useEffect(() => {
     setMounted(true);
@@ -107,7 +109,37 @@ export function Header() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Arama Butonu */}
+            <Link 
+              href="/ara"
+              className="p-2.5 rounded-full hover:bg-gray-100 transition-colors group"
+              title="Ürün Ara"
+            >
+              <Search 
+                size={22} 
+                className="text-gray-600 group-hover:text-amber-600 transition-colors"
+              />
+            </Link>
+
+            {/* Favoriler Butonu */}
+            <Link 
+              href="/favoriler"
+              className="relative p-2.5 rounded-full hover:bg-gray-100 transition-colors group"
+              title="Favorilerim"
+            >
+              <Heart 
+                size={22} 
+                className="text-gray-600 group-hover:text-red-500 transition-colors"
+                fill={mounted && favoriteCount > 0 ? "currentColor" : "none"}
+              />
+              {mounted && favoriteCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {favoriteCount > 9 ? "9+" : favoriteCount}
+                </span>
+              )}
+            </Link>
+
             <Link 
               href="/kampanyalar"
               className="hidden sm:flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-xs font-bold transition-all shadow-md hover:shadow-lg active:scale-95"
@@ -151,6 +183,39 @@ export function Header() {
                     {item.name}
                   </Link>
                 ))}
+                
+                {/* Ürün Ara - Mobil */}
+                <Link
+                  href="/ara"
+                  className={`px-4 py-4 text-base font-bold rounded-xl transition-all flex items-center gap-3 ${
+                    pathname === "/ara" 
+                      ? "bg-amber-50 text-amber-700" 
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Search size={20} />
+                  Ürün Ara
+                </Link>
+
+                {/* Favorilerim - Mobil */}
+                <Link
+                  href="/favoriler"
+                  className={`px-4 py-4 text-base font-bold rounded-xl transition-all flex items-center gap-3 ${
+                    pathname === "/favoriler" 
+                      ? "bg-red-50 text-red-600" 
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Heart size={20} fill={mounted && favoriteCount > 0 ? "currentColor" : "none"} />
+                  Favorilerim
+                  {mounted && favoriteCount > 0 && (
+                    <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                      {favoriteCount}
+                    </span>
+                  )}
+                </Link>
               </div>
             </motion.div>
           )}
