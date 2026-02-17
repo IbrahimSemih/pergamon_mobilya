@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { createProduct, uploadImage } from "@/lib/api";
-import { CATEGORIES, type ProductCategory } from "@/types";
+import { CATEGORIES, TURKISH_CITIES, type ProductCategory } from "@/types";
 import { 
   ArrowLeft, 
   Save, 
@@ -45,6 +45,7 @@ export default function NewProductPage() {
   const [campaignPrice, setCampaignPrice] = useState("");
   const [isInStock, setIsInStock] = useState(true);
   const [isCampaign, setIsCampaign] = useState(false);
+  const [salesCity, setSalesCity] = useState("İzmir");
   const [images, setImages] = useState<string[]>([]); // Önizleme için base64
   const [imageFiles, setImageFiles] = useState<File[]>([]); // Upload için dosyalar
 
@@ -83,6 +84,7 @@ export default function NewProductPage() {
         images: uploadedImageUrls,
         isInStock,
         isCampaign,
+        salesCity,
       };
 
       // Sadece tanımlı fiyatları ekle (undefined değerleri Firestore kabul etmez)
@@ -283,6 +285,31 @@ export default function NewProductPage() {
                   <span className="text-gray-700">Kampanyalı Ürün</span>
                 </label>
               </div>
+            </div>
+          </div>
+
+          {/* Satış Bölgesi */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Satış Bölgesi</h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Satış İli
+              </label>
+              <select
+                value={salesCity}
+                onChange={(e) => setSalesCity(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              >
+                {TURKISH_CITIES.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-2">
+                Bu ürünün satışa sunulacağı il sınırlarını belirler. Ürün detay sayfasında görüntülenir.
+              </p>
             </div>
           </div>
 

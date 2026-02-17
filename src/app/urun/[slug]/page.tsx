@@ -8,7 +8,7 @@ import { WhatsAppButton } from "@/components";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { ShareButton } from "@/components/ShareButton";
 import { CATEGORIES, type Product } from "@/types";
-import { ChevronLeft, ShieldCheck, Truck, CreditCard, Star, Loader2 } from "lucide-react";
+import { ChevronLeft, ShieldCheck, Truck, CreditCard, Star, Loader2, MapPin, Package } from "lucide-react";
 import { motion } from "framer-motion";
 import { use } from "react";
 import { getProductBySlug } from "@/lib/api";
@@ -225,6 +225,45 @@ export default function ProductDetailPage({ params }: PageProps) {
               <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Ürün Detayları</h3>
               <div className="text-gray-600 font-medium leading-relaxed whitespace-pre-line text-lg">
                 {product.description}
+              </div>
+            </div>
+
+            {/* Ürün Özellikleri */}
+            <div className="mb-10">
+              <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Ürün Özellikleri</h3>
+              <div className="bg-gray-50 rounded-2xl border border-gray-100 divide-y divide-gray-100 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <Package size={18} className="text-gray-400" />
+                    <span className="text-sm font-semibold text-gray-700">Stok Durumu</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2.5 h-2.5 rounded-full ${product.isInStock ? "bg-green-500 animate-pulse" : "bg-red-400"}`} />
+                    <span className={`text-sm font-bold ${product.isInStock ? "text-green-600" : "text-red-500"}`}>
+                      {product.isInStock ? "Stokta Mevcut" : "Stokta Yok"}
+                    </span>
+                  </div>
+                </div>
+                {product.salesCity && (
+                  <div className="flex items-center justify-between px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <MapPin size={18} className="text-gray-400" />
+                      <span className="text-sm font-semibold text-gray-700">Satış Bölgesi</span>
+                    </div>
+                    <span className="text-sm font-bold text-gray-900">
+                      {product.salesCity} İli Sınırları
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <Truck size={18} className="text-gray-400" />
+                    <span className="text-sm font-semibold text-gray-700">Teslimat</span>
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">
+                    {product.salesCity ? `${product.salesCity} içi ücretsiz` : "Ücretsiz teslimat"}
+                  </span>
+                </div>
               </div>
             </div>
 

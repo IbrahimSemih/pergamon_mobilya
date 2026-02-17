@@ -37,6 +37,7 @@ const demoProducts: Product[] = [
     isCampaign: true,
     campaignPrice: 45000,
     originalPrice: 55000,
+    salesCity: "İzmir",
     createdAt: new Date(),
   },
   {
@@ -49,6 +50,7 @@ const demoProducts: Product[] = [
     isInStock: true,
     isCampaign: false,
     originalPrice: 12000,
+    salesCity: "İzmir",
     createdAt: new Date(),
   },
 ];

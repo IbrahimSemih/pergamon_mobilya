@@ -47,7 +47,7 @@ export function Header() {
         <div className="hidden md:block border-b border-gray-100/10 pb-4 mb-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center text-sm font-medium">
             <div className="flex items-center gap-6">
-              <a href={`tel:${siteConfig.phone}`} className="flex items-center gap-2 hover:text-amber-600 transition-colors">
+              <a href={`tel:${siteConfig.phone}`} className="flex items-center gap-2 text-gray-500 hover:text-amber-600 transition-colors">
                 <Phone size={14} />
                 <span>{siteConfig.phone}</span>
               </a>

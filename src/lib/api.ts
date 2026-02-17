@@ -44,6 +44,7 @@ const convertDocToProduct = (doc: any): Product => {
     isCampaign: data.isCampaign ?? false,
     campaignPrice: data.campaignPrice,
     originalPrice: data.originalPrice,
+    salesCity: data.salesCity,
     createdAt: data.createdAt ? convertTimestamp(data.createdAt) : new Date(),
     updatedAt: data.updatedAt ? convertTimestamp(data.updatedAt) : undefined,
   };
