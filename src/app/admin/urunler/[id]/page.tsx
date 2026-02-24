@@ -38,7 +38,7 @@ interface PageProps {
 
 export default function EditProductPage({ params }: PageProps) {
   const { id } = use(params);
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isDemoUser } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [loadingProduct, setLoadingProduct] = useState(true);
@@ -112,17 +112,19 @@ export default function EditProductPage({ params }: PageProps) {
     setLoading(true);
 
     try {
-      // Yeni görselleri Firebase Storage'a yükle
-      const uploadedImageUrls: string[] = [];
-      
-      for (let i = 0; i < newImageFiles.length; i++) {
-        const file = newImageFiles[i];
-        const fileName = `products/${slug}-${Date.now()}-${i}.${file.name.split('.').pop()}`;
-        const imageUrl = await uploadImage(file, fileName);
-        uploadedImageUrls.push(imageUrl);
+      let uploadedImageUrls: string[] = [];
+
+      if (isDemoUser) {
+        uploadedImageUrls = [...newImages];
+      } else {
+        for (let i = 0; i < newImageFiles.length; i++) {
+          const file = newImageFiles[i];
+          const fileName = `products/${slug}-${Date.now()}-${i}.${file.name.split('.').pop()}`;
+          const imageUrl = await uploadImage(file, fileName);
+          uploadedImageUrls.push(imageUrl);
+        }
       }
 
-      // Tüm görselleri birleştir (mevcut + yeni)
       const allImages = [...existingImages, ...uploadedImageUrls];
 
       // Ürünü güncelle

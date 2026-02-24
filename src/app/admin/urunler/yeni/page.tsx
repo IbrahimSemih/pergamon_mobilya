@@ -32,7 +32,7 @@ function generateSlug(title: string): string {
 }
 
 export default function NewProductPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isDemoUser } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   
@@ -65,17 +65,21 @@ export default function NewProductPage() {
     setLoading(true);
 
     try {
-      // Görselleri Firebase Storage'a yükle
-      const uploadedImageUrls: string[] = [];
-      
-      for (let i = 0; i < imageFiles.length; i++) {
-        const file = imageFiles[i];
-        const fileName = `products/${slug}-${Date.now()}-${i}.${file.name.split('.').pop()}`;
-        const imageUrl = await uploadImage(file, fileName);
-        uploadedImageUrls.push(imageUrl);
+      let uploadedImageUrls: string[] = [];
+
+      if (isDemoUser) {
+        // Demo kullanıcı: base64 önizleme görsellerini doğrudan kullan
+        uploadedImageUrls = [...images];
+      } else {
+        // Gerçek kullanıcı: görselleri Firebase Storage'a yükle
+        for (let i = 0; i < imageFiles.length; i++) {
+          const file = imageFiles[i];
+          const fileName = `products/${slug}-${Date.now()}-${i}.${file.name.split('.').pop()}`;
+          const imageUrl = await uploadImage(file, fileName);
+          uploadedImageUrls.push(imageUrl);
+        }
       }
 
-      // Ürünü Firestore'a kaydet
       const productData: any = {
         title,
         slug,

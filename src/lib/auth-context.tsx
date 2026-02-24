@@ -21,6 +21,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   isDemo: boolean;
+  isDemoUser: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,12 +36,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isDemo = !isFirebaseConfigured;
 
   useEffect(() => {
+    // Demo session kontrolü (Firebase aktif olsa bile)
+    const savedUser = localStorage.getItem("demo_user");
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+      setLoading(false);
+      return;
+    }
+
     if (isDemo) {
-      // Demo modunda localStorage'dan session kontrol et
-      const savedUser = localStorage.getItem("demo_user");
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      }
       setLoading(false);
       return;
     }
@@ -76,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    if (isDemo) {
+    if (isDemoUser) {
       localStorage.removeItem("demo_user");
       setUser(null);
       return;
@@ -87,8 +91,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const isDemoUser = user !== null && "uid" in user && user.uid === "demo-user-id";
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, isDemo }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, isDemo, isDemoUser }}>
       {children}
     </AuthContext.Provider>
   );
